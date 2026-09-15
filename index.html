@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
 <meta name="theme-color" content="#FAF7F3" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -31,13 +31,14 @@
     --zero:#56535F; --ph:#6B6876; --delbg:rgba(244,99,99,.16); --delink:#E58C8C;
     --shadow:0 2px 4px rgba(0,0,0,.3),0 14px 34px rgba(0,0,0,.35);
   }
-  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body{ margin:0; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  html,body{ margin:0; height:100%; overflow:hidden; overscroll-behavior:none; }
   body{
     background:var(--bg); color:var(--ink);
     font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5;
-    min-height:100dvh;
+    position:fixed; inset:0;
   }
+  .scroll{ position:absolute; inset:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; }
   /* soft pastel wash, style ảnh 3-4 */
   body::before{
     content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
@@ -87,7 +88,11 @@
   .amount-zone .val{ font-family:"Bricolage Grotesque",sans-serif; font-weight:700; font-size:64px; letter-spacing:-.04em; line-height:1; font-variant-numeric:tabular-nums; }
   .amount-zone .val.zero{ color:var(--zero); }
 
-  .catgrid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:12px; }
+  .catgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:10px; }
+  .catgrid .catbtn{ padding:13px 6px; font-size:13px; }
+  .cardrow{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:12px; }
+  .cardrow .catbtn{ padding:11px 10px; font-size:13px; }
+  .cardrow .catbtn.on.amex{ background:#5EA0E6; border-color:#5EA0E6; color:#fff; }
   .catbtn{ display:flex; align-items:center; justify-content:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:var(--r-md); padding:14px 10px; font-size:14px; font-weight:600; box-shadow:0 1px 2px rgba(27,27,31,.03); transition:transform .08s ease; }
   .catbtn:active{ transform:scale(.97); }
   .catbtn .cdot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
@@ -130,6 +135,7 @@
   .abudget .atxt{ flex:0 0 auto; white-space:nowrap; }
   .abudget b{ color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums; }
   .abudget b.over{ color:#D64B4B; }
+  .abudget .amax{ color:var(--muted); font-variant-numeric:tabular-nums; }
   .abudget .mini{ flex:1; position:relative; height:7px; border-radius:999px; background:var(--track); }
   .abudget .minifill{ position:absolute; left:0; top:0; bottom:0; border-radius:999px; min-width:3px; }
   .abudget .minitick{ position:absolute; top:-3px; bottom:-3px; width:2px; border-radius:2px; background:var(--ink); opacity:.5; }
@@ -160,6 +166,15 @@
   .cg .v{ font-family:"Bricolage Grotesque",sans-serif; font-weight:800; font-size:16.5px; letter-spacing:-.02em; margin-top:3px; font-variant-numeric:tabular-nums; }
   .cg .v .p{ font-family:"JetBrains Mono",monospace; font-size:10.5px; font-weight:600; color:var(--muted); margin-left:4px; }
 
+  .csplit{ background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow); padding:14px 16px; margin-bottom:14px; }
+  .csplit .ch{ font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.12em; color:var(--muted); margin-bottom:10px; }
+  .cbar{ display:flex; height:12px; border-radius:999px; overflow:hidden; background:var(--track); margin-bottom:10px; }
+  .cbar span{ height:100%; }
+  .cleg{ display:flex; justify-content:space-between; gap:10px; font-size:12.5px; flex-wrap:wrap; }
+  .cleg .ci{ display:flex; align-items:center; gap:6px; color:var(--muted); }
+  .cleg .ci .cdot{ width:8px; height:8px; border-radius:3px; }
+  .cleg b{ color:var(--ink); font-variant-numeric:tabular-nums; }
+  .ctag{ font-family:"JetBrains Mono",monospace; font-size:9px; font-weight:700; color:#5EA0E6; background:rgba(94,160,230,.14); padding:1px 5px; border-radius:5px; vertical-align:1px; }
   .txh{ font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.12em; color:var(--muted); margin:20px 4px 8px; }
   .dhead{ display:flex; align-items:baseline; justify-content:space-between; padding:10px 4px 6px; }
   .dhead .d{ font-size:12px; font-weight:600; color:var(--muted); }
@@ -240,12 +255,13 @@
 </style>
 </head>
 <body>
+<div class="scroll" id="scroller">
 <div class="app">
   <header class="top">
     <div class="logo">S</div>
     <div class="brandcol">
       <h1>Smeep Finance</h1>
-      <div class="meta"><span id="syncState">Connecting…</span><span class="dotsep"></span><span>v1</span></div>
+      <div class="meta"><span id="syncState">Connecting…</span><span class="dotsep"></span><span>v5</span></div>
     </div>
     <span class="date" id="hDate"></span>
     <button class="tbtn" id="themeBtn" aria-label="Toggle dark mode">🌙</button>
@@ -261,6 +277,8 @@
     </div>
 
     <div class="catgrid" id="catGrid"></div>
+
+    <div class="cardrow" id="cardRow"></div>
 
     <div class="abudget" id="addBudget"></div>
 
@@ -309,9 +327,12 @@
     </div>
 
 
+    <div class="csplit" id="cardSplit"></div>
+
     <div class="txh">TRANSACTIONS</div>
     <div id="txList"></div>
   </section>
+</div>
 </div>
 
 <div class="auth-ov show" id="authOv">
@@ -343,15 +364,20 @@ const sb = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 /* ---------------- Categories ---------------- */
 const CATS = [
-  { key:"groceries", emoji:"🥗", name:"Groceries", color:"#57C89B" },
-  { key:"dining",    emoji:"🍽️", name:"Dining",    color:"#F6A77C" },
-  { key:"shopping",  emoji:"🛒", name:"Shopping",  color:"#B49CF5" },
-  { key:"amex",      emoji:"💳", name:"Amex",      color:"#5EA0E6" },
+  { key:"groceries", emoji:"🥗", name:"Groceries",  color:"#57C89B" },
+  { key:"dining",    emoji:"🍽️", name:"Dining",     color:"#F6A77C" },
+  { key:"misc",      emoji:"🛒", name:"Linh Tinh",  color:"#B49CF5" },
+];
+
+/* Payment method on every expense */
+const CARDS = [
+  { key:"amex",    emoji:"💳", name:"Amex",    color:"#5EA0E6" },
+  { key:"regular", emoji:"💵", name:"Regular", color:"#8A8694" },
 ];
 const catOf = k => CATS.find(c=>c.key===k) || CATS[0];
 
 /* Food budget: Groceries + Dining, 8 000 kr/month */
-const BUDGET = { amount:8000, cats:["groceries","dining"], label:"Food budget", emoji:"🥗🍽️" };
+const BUDGET = { amount:10000, cats:["groceries","dining"], label:"Food budget", emoji:"🥗🍽️" };
 
 /* ----- Oversikt: Isaac & Nga monthly plan (from I&N oversikt sheet) ----- */
 const PEOPLE=[ {k:"I",name:"Isaac",color:"#5EA0E6"}, {k:"N",name:"Nga",color:"#F387BB"} ];
@@ -360,15 +386,15 @@ const PLAN={
   fixed:[
     { id:"leie",     name:"Leie",           I:13000, N:7000 },
     { id:"laan",     name:"Lån",            I:1800,  N:5000 },
-    { id:"billsp",   name:"Bills personal", I:200,   N:1650, note:"Isaac: YouTube, Spotify · Nga: Tlf + Mr Hien" },
+    { id:"billsp",   name:"Bills personal", I:200,   N:2000, note:"Isaac: YouTube, Spotify · Nga: Tlf + Mr Hien" },
     { id:"billsh",   name:"Bills house",    I:2100,  N:600,  note:"Isaac: Strøm, internett, forsikring · Nga: Pipo mat" },
     { id:"transport",name:"Transport",      I:500,   N:500 },
-    { id:"mat",      name:"Mat",            I:4000,  N:4000, auto:true, note:"Auto-tracked from Groceries + Dining" },
+    { id:"mat",      name:"Mat",            I:5000,  N:5000, auto:true, note:"Auto-tracked from Groceries + Dining" },
   ],
   savings:[
     { id:"bsu",     name:"BSU",           I:3000, N:3000 },
     { id:"notouch", name:"Spar no touch", I:3000, N:2000 },
-    { id:"poker",   name:"Poker",         I:2000, N:0 },
+    { id:"poker",   name:"Poker/Beauty",  I:2000, N:1000 },
     { id:"asia",    name:"Reise Asia",    I:3000, N:3000 },
     { id:"wedding", name:"Wedding 5 år",  I:2000, N:2000 },
   ],
@@ -420,7 +446,7 @@ async function reloadAll(){
     ]);
     if(a.error) throw a.error;
     if(b.error) throw b.error;
-    expenses=(a.data||[]).map(e=>({ id:e.id, amount:Number(e.amount), cat:e.category, note:e.note||"", spent_on:e.spent_on, created_at:e.created_at }));
+    expenses=(a.data||[]).map(e=>({ id:e.id, amount:Number(e.amount), cat:e.category, card:e.card||"regular", note:e.note||"", spent_on:e.spent_on, created_at:e.created_at }));
     checks={};
     (b.data||[]).forEach(r=>{ checks[r.month+":"+r.item+":"+r.person]=true; });
     setSync("ok");
@@ -443,6 +469,7 @@ async function dbRemoveExpense(id){
 /* ---------------- ADD page ---------------- */
 let amtStr = "";
 let pickedCat = null;
+let pickedCard = "amex";
 
 function renderAmt(){
   const v = $("amtVal");
@@ -479,6 +506,16 @@ function renderCatGrid(){
     g.appendChild(b);
   });
 }
+function renderCardRow(){
+  const g=$("cardRow"); g.innerHTML="";
+  CARDS.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="catbtn "+c.key+(pickedCard===c.key?" on":"");
+    b.innerHTML='<span class="cdot" style="background:'+c.color+'"></span>'+c.emoji+" "+esc(c.name);
+    b.onclick=()=>{ pickedCard=c.key; renderCardRow(); };
+    g.appendChild(b);
+  });
+}
 document.addEventListener("keydown",e=>{
   if($("authOv").classList.contains("show")) return;
   if(!$("pageAdd").classList.contains("on")) return;
@@ -493,10 +530,10 @@ $("addBtn").onclick=async()=>{
   if(!isFinite(amount)||amount<=0||!configured) return;
   const btn=$("addBtn");
   btn.disabled=true; $("addLbl").textContent="Saving…";
-  const row=await dbAddExpense({ amount:Math.round(amount*100)/100, category:pickedCat||"groceries", note:$("note").value.trim(), spent_on:todayStr() });
+  const row=await dbAddExpense({ amount:Math.round(amount*100)/100, category:pickedCat||"groceries", card:pickedCard, note:$("note").value.trim(), spent_on:todayStr() });
   if(row){
-    expenses.unshift({ id:row.id, amount:Number(row.amount), cat:row.category, note:row.note||"", spent_on:row.spent_on, created_at:row.created_at });
-    amtStr=""; pickedCat=null; $("note").value=""; renderCatGrid();
+    expenses.unshift({ id:row.id, amount:Number(row.amount), cat:row.category, card:row.card||"regular", note:row.note||"", spent_on:row.spent_on, created_at:row.created_at });
+    amtStr=""; pickedCat=null; pickedCard="amex"; $("note").value=""; renderCatGrid(); renderCardRow();
     curY=now.getFullYear(); curM=now.getMonth(); renderDash();
     btn.classList.add("done"); $("addLbl").textContent="Added ✓";
     setTimeout(()=>{ btn.classList.remove("done"); $("addLbl").textContent="Add expense"; renderAmt(); },900);
@@ -571,12 +608,26 @@ function renderAddBudget(){
   const st=budgetState(spent,pacePct);
   const pct=Math.min(100,spent/BUDGET.amount*100);
   const left=BUDGET.amount-spent;
-  const txt = left>=0
-    ? BUDGET.emoji+' Food left: <b>kr '+fmtKr(left)+'</b>'
-    : BUDGET.emoji+' Food: <b class="over">kr '+fmtKr(-left)+' over</b>';
+  const txt = BUDGET.emoji+' Food: <b'+(st==="over"?' class="over"':'')+'>kr '+fmtKr(spent)+'</b><span class="amax"> / '+fmtKr(BUDGET.amount)+'</span>';
   $("addBudget").innerHTML=
     '<span class="atxt">'+txt+'</span>'+
     '<span class="mini"><span class="minifill" style="width:'+pct.toFixed(1)+'%;background:'+stColors[st]+'"></span><span class="minitick" style="left:'+(pacePct*100).toFixed(1)+'%"></span></span>';
+}
+
+function renderCardSplit(list,total){
+  const el=$("cardSplit");
+  if(total<=0){ el.style.display="none"; return; }
+  el.style.display="";
+  const amex=list.filter(e=>e.card==="amex").reduce((s,e)=>s+e.amount,0);
+  const reg=total-amex;
+  const pa=Math.round(amex/total*100), pr=100-pa;
+  el.innerHTML=
+    '<div class="ch">PAID WITH</div>'+
+    '<div class="cbar"><span style="width:'+(amex/total*100).toFixed(1)+'%;background:#5EA0E6"></span><span style="width:'+(reg/total*100).toFixed(1)+'%;background:#8A8694"></span></div>'+
+    '<div class="cleg">'+
+      '<span class="ci"><span class="cdot" style="background:#5EA0E6"></span>💳 Amex <b>kr '+fmtKr(amex)+'</b> · '+pa+'%</span>'+
+      '<span class="ci"><span class="cdot" style="background:#8A8694"></span>💵 Regular <b>kr '+fmtKr(reg)+'</b> · '+pr+'%</span>'+
+    '</div>';
 }
 
 function renderDonut(byCat,total){
@@ -614,6 +665,7 @@ function renderDash(){
   list.forEach(e=>{ by[e.cat]=(by[e.cat]||0)+e.amount; });
   const byCat=Object.entries(by).sort((a,b)=>b[1]-a[1]);
   renderDonut(byCat,total);
+  renderCardSplit(list,total);
 
   $("catCells").innerHTML=byCat.map(([key,v])=>{
     const c=catOf(key), pct=total>0?Math.round(v/total*100):0;
@@ -636,7 +688,7 @@ function renderDash(){
         const c=catOf(e.cat);
         const time=new Date(e.created_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
         return '<div class="item"><span class="emo" style="background:'+c.color+'26">'+c.emoji+'</span>'+
-          '<span class="mid"><span class="t1">'+esc(e.note||c.name)+'</span><span class="t2">'+(e.note?esc(c.name)+' · ':'')+time+'</span></span>'+
+          '<span class="mid"><span class="t1">'+esc(e.note||c.name)+'</span><span class="t2">'+(e.note?esc(c.name)+' · ':'')+time+(e.card==="amex"?' · <span class="ctag">AMEX</span>':'')+'</span></span>'+
           '<span class="amt">kr '+fmtKr(e.amount)+'</span>'+
           '<button class="del" data-del="'+e.id+'" title="Delete">✕</button></div>';
       }).join("");
@@ -734,7 +786,7 @@ function go(page){
   $("navAdd").classList.toggle("on",page==="add");
   $("navDash").classList.toggle("on",page==="dash");
   $("navOver").classList.toggle("on",page==="over");
-  window.scrollTo({top:0});
+  $("scroller").scrollTo({top:0});
 }
 $("navAdd").onclick=()=>go("add");
 $("navDash").onclick=()=>go("dash");
@@ -794,7 +846,7 @@ signOutBtn.onclick=async()=>{ await sb.auth.signOut(); expenses=[]; checks={}; r
 
 /* ---------------- Init ---------------- */
 $("hDate").textContent=new Date().toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
-renderPad(); renderCatGrid(); renderAmt(); renderDash();
+renderPad(); renderCatGrid(); renderCardRow(); renderAmt(); renderDash();
 (async function(){
   if(!configured){ hideAuth(); setSync("none"); showNotice(); return; }
   const { data:{ session } }=await sb.auth.getSession();
